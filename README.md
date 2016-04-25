@@ -6,9 +6,7 @@
  * <br>3.父包和子包配置有冲突就以子包为准</p>
  * <p>和assets文件夹中的log.properties文件配合控制log的打印输出
  * 在文件中配置类的全名和log打印模式(true表为debug模式,打印log;false表示非debug模式,即不打印log)
- * 在文件中配置类的log打印模式是永久生效的,也可直接调用debugAll()或者debug()方法来动态改变文件的配置
- * 不过调用这两个方法改变的打印模式只在内存中生效,不会写入配置文件中
- * addDebug()是动态添加新的类的打印模式,只在内存中生效,不写入配置文件</p>
+
 在项目工程的assets目录下建立log.properties文件，文件中做如下配置<br>
 com.xtc.watch=true # app包名默认打印所有log<br>
 saveFile=true #log自动保存到文件中<br>
