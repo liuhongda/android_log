@@ -23,5 +23,7 @@ public interface ILog {
 
     void setDebug(boolean debug);
 
+    boolean isDebug();
+
     void setSaveLevel(boolean v, boolean d, boolean i, boolean w, boolean e);
 }

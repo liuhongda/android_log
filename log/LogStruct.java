@@ -24,7 +24,7 @@ public class LogStruct {
     LogStruct(String level, String tag, String text, String pckName) {
         String formatDate = (new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")).format(new Date());
         this.time = formatDate;
-        this.pid = android.os.Process.myPid();
+        this.pid = Process.myPid();
         this.tid = Process.myTid();
         this.pckName = pckName;
         this.level = level;

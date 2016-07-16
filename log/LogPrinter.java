@@ -34,14 +34,6 @@ public class LogPrinter implements ILog {
 
     private String pckName;
 
-    private String className;
-
-    private String simpleClassName;
-
-    private String methodName;
-
-    private int lineNumber;
-
     private boolean isDebug = true;
 
     /**
@@ -59,9 +51,9 @@ public class LogPrinter implements ILog {
 
     private boolean e = true;
 
-    public String saveUrl = Environment.getExternalStorageDirectory() + "/xtci3data/logs/watch/";
+    public String saveUrl = Environment.getExternalStorageDirectory() + "/xtc/i3watch/launcher/logs/watch/";
 
-    public String testUrl = Environment.getExternalStorageDirectory() + "/xtci3data/logs/test/";
+    public String testUrl = Environment.getExternalStorageDirectory() + "/xtc/i3watch/launcher/logs/test/";
 
     private Properties properties = new Properties();
 
@@ -130,6 +122,11 @@ public class LogPrinter implements ILog {
         this.isDebug = isDebug;
     }
 
+    @Override
+    public boolean isDebug() {
+        return isDebug;
+    }
+
     /**
      * 日志保存模式,false不保存文件,true则自动保存文件
      */
@@ -146,33 +143,32 @@ public class LogPrinter implements ILog {
         this.e = e;
     }
 
-    private void initLogMember(StackTraceElement[] sElements) {
-        className = sElements[1].getClassName();
-        int i = className.lastIndexOf(".");
-        if ((i != -1) && (i + 1 < className.length() - 1)) {
-            simpleClassName = className.substring(i + 1, className.length());
-        } else {
-            simpleClassName = className;
-        }
-        methodName = sElements[1].getMethodName();
-        lineNumber = sElements[1].getLineNumber();
-    }
-
-    private synchronized void log(LEVEL level, StackTraceElement[] sElements, String msg) {
+    private void log(LEVEL level, StackTraceElement[] sElements, String msg) {
         if (!isDebug) {
             //Log.i("LogUtil", "DEBUG = false");
             return;
         }
-        initLogMember(sElements);
-        if (check()) {
-            print(level, msg);
+
+        String className = sElements[1].getClassName();
+        String simpleClassName = className;
+        int i = className.lastIndexOf(".");
+        if (i + 1 < className.length() - 1) {
+            simpleClassName = className.substring(i + 1, className.length());
+        } else {
+            simpleClassName = className;
+        }
+        String methodName = sElements[1].getMethodName();
+        int lineNumber = sElements[1].getLineNumber();
+
+        if (check(className)) {
+            print(level, msg, simpleClassName, methodName, lineNumber);
         } else {
             // do nothing
         }
     }
 
-    private void print(LEVEL level, String msg) {
-        String tag = formatTag();
+    private void print(LEVEL level, String msg, String className, String methodName, int lineNumber) {
+        String tag = formatTag(className, methodName, lineNumber);
 
         switch (level) {
             case verbose:
@@ -195,12 +191,12 @@ public class LogPrinter implements ILog {
         }
     }
 
-    private void saveLogToFile(LEVEL level, String tag, String msg) {
+    private void saveLogToFile(LEVEL level, String tag, String msg, StackTraceElement[] sElements) {
         if (!isDebug) {
             return;
         }
         String formatDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
-        saveLogToFile(level, saveUrl, formatDate + ".txt", false, tag, msg);
+        saveLogToFile(level, saveUrl + level.name() + "/", formatDate + "_" + level.name() + ".txt", false, tag, msg, sElements);
     }
 
     /**
@@ -211,15 +207,28 @@ public class LogPrinter implements ILog {
      * @param fileName
      * @param msg
      */
-    private void saveLogToFile(LEVEL level, String dir, String fileName, boolean clear, String tag, String msg) {
+    private void saveLogToFile(LEVEL level, String dir, String fileName, boolean clear, String tag, String msg, StackTraceElement[] sElements) {
         if (TextUtils.isEmpty(tag)) {
-            tag = formatTag();
+            if (sElements == null) {
+                sElements = new Throwable().getStackTrace();
+            }
+            String className = sElements[1].getClassName();
+            String simpleClassName = className;
+            int i = className.lastIndexOf(".");
+            if (i + 1 < className.length() - 1) {
+                simpleClassName = className.substring(i + 1, className.length());
+            } else {
+                simpleClassName = className;
+            }
+            String methodName = sElements[1].getMethodName();
+            int lineNumber = sElements[1].getLineNumber();
+            tag = formatTag(simpleClassName, methodName, lineNumber);
         }
         LogStruct logStruct = new LogStruct(level.name(), tag, msg, pckName);
         LogSaver.saveLog(dir, fileName, clear, logStruct);
     }
 
-    private boolean check() {
+    private boolean check(String className) {
 
         if (properties == null) {
             LogUtil.e("LogPrinter", "properties is null");
@@ -229,7 +238,7 @@ public class LogPrinter implements ILog {
         return LogPrintFilter.checkPrint(properties, className);
     }
 
-    private String formatTag() {
+    private String formatTag(String simpleClassName, String methodName, int lineNumber) {
         StringBuffer strBuf = new StringBuffer();
         strBuf.append(simpleClassName);
         strBuf.append(".");
@@ -243,14 +252,14 @@ public class LogPrinter implements ILog {
     public void test(StackTraceElement[] sElements, String msg) {
         log(LEVEL.error, sElements, msg);
         String formatDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
-        saveLogToFile(LEVEL.debug, testUrl, formatDate + ".txt", true, null, msg);
+        saveLogToFile(LEVEL.debug, testUrl, formatDate + ".txt", true, null, msg, sElements);
     }
 
     @Override
     public void v(StackTraceElement[] sElements, String msg) {
         log(LEVEL.verbose, sElements, msg);
         if (saveFile && v) {
-            saveLogToFile(LEVEL.verbose, null, msg);
+            saveLogToFile(LEVEL.verbose, null, msg, sElements);
         }
     }
 
@@ -258,7 +267,7 @@ public class LogPrinter implements ILog {
     public void d(StackTraceElement[] sElements, String msg) {
         log(LEVEL.debug, sElements, msg);
         if (saveFile && d) {
-            saveLogToFile(LEVEL.debug, null, msg);
+            saveLogToFile(LEVEL.debug, null, msg, sElements);
         }
     }
 
@@ -266,7 +275,7 @@ public class LogPrinter implements ILog {
     public void i(StackTraceElement[] sElements, String msg) {
         log(LEVEL.info, sElements, msg);
         if (saveFile && i) {
-            saveLogToFile(LEVEL.info, null, msg);
+            saveLogToFile(LEVEL.info, null, msg, sElements);
         }
     }
 
@@ -274,7 +283,7 @@ public class LogPrinter implements ILog {
     public void w(StackTraceElement[] sElements, String msg) {
         log(LEVEL.warn, sElements, msg);
         if (saveFile && w) {
-            saveLogToFile(LEVEL.warn, null, msg);
+            saveLogToFile(LEVEL.warn, null, msg, sElements);
         }
     }
 
@@ -282,7 +291,7 @@ public class LogPrinter implements ILog {
     public void e(StackTraceElement[] sElements, String msg) {
         log(LEVEL.error, sElements, msg);
         if (saveFile && e) {
-            saveLogToFile(LEVEL.error, null, msg);
+            saveLogToFile(LEVEL.error, null, msg, sElements);
         }
     }
 
@@ -293,7 +302,7 @@ public class LogPrinter implements ILog {
         throwable.printStackTrace(printWriter);
         log(LEVEL.error, sElements, stringWriter.toString());
         if (saveFile && e) {
-            saveLogToFile(LEVEL.error, null, stringWriter.toString());
+            saveLogToFile(LEVEL.error, null, stringWriter.toString(), sElements);
         }
     }
 
@@ -301,7 +310,7 @@ public class LogPrinter implements ILog {
     public void e(String tag, String text) {
         Log.e(tag, text);
         if (saveFile && e) {
-            saveLogToFile(LEVEL.error, tag, text);
+            saveLogToFile(LEVEL.error, tag, text, null);
         }
     }
 
@@ -309,7 +318,7 @@ public class LogPrinter implements ILog {
     public void e(String tag, Throwable throwable) {
         Log.e(tag, throwable.toString());
         if (saveFile && e) {
-            saveLogToFile(LEVEL.error, tag, throwable.toString());
+            saveLogToFile(LEVEL.error, tag, throwable.toString(), null);
         }
     }
 
@@ -317,7 +326,7 @@ public class LogPrinter implements ILog {
     public void w(String tag, String text) {
         Log.w(tag, text);
         if (saveFile && w) {
-            saveLogToFile(LEVEL.warn, tag, text);
+            saveLogToFile(LEVEL.warn, tag, text, null);
         }
     }
 
@@ -325,7 +334,7 @@ public class LogPrinter implements ILog {
     public void i(String tag, String text) {
         Log.i(tag, text);
         if (saveFile && i) {
-            saveLogToFile(LEVEL.warn, tag, text);
+            saveLogToFile(LEVEL.warn, tag, text, null);
         }
     }
 
@@ -333,7 +342,7 @@ public class LogPrinter implements ILog {
     public void d(String tag, String text) {
         Log.d(tag, text);
         if (saveFile && d) {
-            saveLogToFile(LEVEL.warn, tag, text);
+            saveLogToFile(LEVEL.warn, tag, text, null);
         }
     }
 
@@ -341,7 +350,7 @@ public class LogPrinter implements ILog {
     public void v(String tag, String text) {
         Log.v(tag, text);
         if (saveFile && v) {
-            saveLogToFile(LEVEL.warn, tag, text);
+            saveLogToFile(LEVEL.warn, tag, text, null);
         }
     }
 }

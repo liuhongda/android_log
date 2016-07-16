@@ -36,7 +36,7 @@ public class LogSaver {
             try {
                 logFile.createNewFile();
             } catch (IOException e) {
-                LogUtil.e(TAG, e.toString());
+                e.printStackTrace();
             }
         }
         writeToFile(logFile, logStruct, true);
@@ -49,13 +49,13 @@ public class LogSaver {
             fos = new FileOutputStream(logFile, append); // 内容追加方式append
             fos.write(line.getBytes());
         } catch (IOException e) {
-            LogUtil.e(TAG, "save log failed:" + e.toString());
+            e.printStackTrace();
         } finally {
             if (fos != null) {
                 try {
                     fos.close();
                 } catch (IOException e) {
-                    LogUtil.e(TAG, "close FileOutputStream failed after save log:" + e.toString());
+                    e.printStackTrace();
                 }
             }
         }
